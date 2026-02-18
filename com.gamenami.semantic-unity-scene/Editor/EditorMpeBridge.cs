@@ -11,8 +11,7 @@ namespace Gamenami.SemanticUnityScene.Editor
     [InitializeOnLoad]
     public static class EditorMpeBridge
     {
-        private const string ChannelName = "my-agent-channel";
-        private static int _channelId = -1;
+        private const string ChannelName = "sus-agent-channel";
         private const string PythonHandshakeUrl = "ws://127.0.0.1:8765";
 
         static EditorMpeBridge()
@@ -49,10 +48,10 @@ namespace Gamenami.SemanticUnityScene.Editor
                 byte[] bytes = Encoding.UTF8.GetBytes(message);
                 await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
                 
-                UnityEngine.Debug.Log($"[MPE] Sent dynamic port {mpePort} to Python agent.");
+                Debug.Log($"[MPE] Sent dynamic port {mpePort} to Semantic Unity Scene agent server.");
             }
             catch (Exception e) {
-                UnityEngine.Debug.LogWarning($"[MPE] Python handshake failed (is server running?): {e.Message}");
+                Debug.LogWarning($"[MPE] Python handshake failed (is server running?): {e.Message}");
             }
         }
 
@@ -74,11 +73,10 @@ namespace Gamenami.SemanticUnityScene.Editor
             var channel = ChannelService.GetChannelList();
             foreach (var info in channel)
             {
-                if (info.name == ChannelName)
-                {
-                    byte[] data = Encoding.UTF8.GetBytes(message);
-                    ChannelService.Broadcast(info.id, data);
-                }
+                if (info.name != ChannelName) continue;
+                
+                byte[] data = Encoding.UTF8.GetBytes(message);
+                ChannelService.Broadcast(info.id, data);
             }
         }
     }

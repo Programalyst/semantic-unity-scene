@@ -10,7 +10,7 @@
   "unity": "2022.3",
   "documentationUrl": "https://github.com/Programalyst/semantic-unity-scene",
   "changelogUrl": "https://github.com",
-  "licensesUrl": "https://github.com",
+  "licensesUrl": "https://github.com/Programalyst/semantic-unity-scene/blob/main/LICENSE.md",
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.2"
   }

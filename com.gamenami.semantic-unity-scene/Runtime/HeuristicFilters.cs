@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using UnityEngine;
 
-namespace Gamenami.SemanticUnityScene.Editor
+namespace Gamenami.SemanticUnityScene
 {
     public static class HeuristicFilters
     {
