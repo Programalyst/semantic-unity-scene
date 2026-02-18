@@ -2,6 +2,7 @@ using System;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.MPE;
 using UnityEngine;
@@ -30,6 +31,8 @@ namespace Gamenami.SemanticUnityScene.Editor
             // 2. Register a handler for incoming messages
             // This will trigger even in Editor Mode (No Play Mode required)
             ChannelService.GetOrCreateChannel(ChannelName, OnMessageReceived);
+            
+            Gamenami.SemanticUnityScene.BridgeRelay.OnRequestSendToServer += HandleRuntimeRequest;
         
             Debug.Log($"MPE Bridge Active on {ChannelService.GetAddress()}:{ChannelService.GetPort()}");
         }
@@ -61,14 +64,27 @@ namespace Gamenami.SemanticUnityScene.Editor
             Debug.Log($"[MPE Received] Client {clientId}: {message}");
         
             // Example: Process command from your Python Agent
+            /*
             if (message.Contains("CreateCube"))
             {
                 GameObject.CreatePrimitive(PrimitiveType.Cube);
             }
+            */
+        }
+        
+        private static void HandleRuntimeRequest(string json, byte[] image)
+        {
+            var payload = new {
+                sceneJson = JsonConvert.DeserializeObject(json), // Ensures nested JSON is valid
+                b64Image = Convert.ToBase64String(image)
+            };
+
+            // 2. Use your existing MPE broadcast logic
+            SendToAgent(JsonConvert.SerializeObject(payload));
         }
 
         // Call this to send data back to your Python agent
-        public static void SendToAgent(string message)
+        private static void SendToAgent(string message)
         {
             var channel = ChannelService.GetChannelList();
             foreach (var info in channel)
@@ -79,5 +95,7 @@ namespace Gamenami.SemanticUnityScene.Editor
                 ChannelService.Broadcast(info.id, data);
             }
         }
+        
+        
     }
 }

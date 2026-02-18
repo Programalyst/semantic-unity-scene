@@ -42,11 +42,11 @@ namespace Gamenami.SemanticUnityScene
         public static bool IsGameplayObject(GameObject obj) 
         {
             // Exclude UI text and Cinemachine internals
-            if (_ignoredTypes.Any(t => obj.name.Contains(t, System.StringComparison.OrdinalIgnoreCase)))
+            if (_ignoredTypes.Any(t => obj.name.Contains(t, StringComparison.OrdinalIgnoreCase)))
                 return false;
             
             // Exclude "Managers" and other custom systems
-            if (_ignoredCustomTypes.Any(t => obj.name.Contains(t, System.StringComparison.OrdinalIgnoreCase)))
+            if (_ignoredCustomTypes.Any(t => obj.name.Contains(t, StringComparison.OrdinalIgnoreCase)))
                 return false;
             
             foreach (var comp in obj.GetComponents<Component>()) 
