@@ -31,21 +31,35 @@ config = types.GenerateContentConfig(
     system_instruction=system_prompt
 )
 
-async def gemini_image_analysis(image_text: list[dict[str, str]]) -> list[FunctionCall] | str:
+async def gemini_image_analysis(scene_json, b64_image) -> list[FunctionCall] | str:
     
-    for chunk in image_text:
-        if chunk["mime_type"] == "image/jpeg":
-            b64encoded_image = chunk["data"]
-            
-        elif chunk["mime_type"] == "text/plain":
-            prompt = chunk["data"]
+    # 1. Prepare the Image Part
+    image_bytes = base64.b64decode(b64_image)
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
 
-    image_bytes = base64.b64decode(b64encoded_image)
-    image = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+    # 2. Prepare the Semantic Context (JSON)
+    # We turn the JSON object back into a string for the prompt
+    semantic_context = json.dumps(scene_json, indent=2)
 
+    # 3. Build the Master Prompt
+    # This tells Gemini: "Look at the image, but use this JSON for exact coordinates"
+    prompt = f"""
+    You are an autonomous agent playing a Unity tactics game. 
+    Attached is the current screenshot and the semantic scene data in JSON format.
+    
+    ### Semantic Scene Data:
+    {semantic_context}
+    
+    ### Task:
+    Analyze the image and the JSON. Identify the best tactical move. 
+    Use the `viewportPos` and `path` from the JSON to identify targets.
+    """
+
+    # 4. Generate Content
+    # Ensure 'config' includes your tools/function_declarations for clicking
     response = gemini_sdk_client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=[prompt,image],
+        contents=[prompt,image_part],
         config=config,
     )
     print(f"Tokens used: {response.usage_metadata}")

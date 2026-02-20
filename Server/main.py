@@ -3,6 +3,7 @@ import websockets
 import logging
 import os
 import json
+from unityBridge import handle_unity_payload
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -14,29 +15,15 @@ async def connect_to_unity_mpe(unity_port):
             logging.info(f"Connected to Unity MPE on port {unity_port}")
             
             async for message in websocket:
-                try:
-                     # 1. Strip Unity's 4-byte ID header
-                    payload = message[4:] if isinstance(message, bytes) else message
-        
-                    # 2. GUARD: If it doesn't look like JSON, just ignore it silently
-                    if not payload or not str(payload).strip().startswith('{'):
-                        # "Catch" numeric Unity ClientID and ignore without an error
-                        continue 
+                # 1. Strip Unity's 4-byte ID header
+                payload = message[4:] if isinstance(message, bytes) else message
+    
+                # 2. GUARD: If it doesn't look like JSON, just ignore it silently
+                if not payload or not str(payload).strip().startswith('{'):
+                    # "Catch" numeric Unity ClientID and ignore without an error
+                    continue 
 
-                    # 3. Parse only if it passed the guard
-                    data = json.loads(payload)
-                    
-                    scene_json = data.get("sceneJson", {})
-                    b64_image = data.get("b64Image", "")
-                    
-                    logging.info(f"SUCCESS: Received JSON ({len(str(scene_json))} chars) and Image {len(str(b64_image))} chars")
-                    
-                    # TODO: Trigger LLM here
-                    
-                except json.JSONDecodeError as je:
-                    logging.warning(f"Received a malformed JSON payload. Error: {je}")
-                except Exception as e:
-                    logging.error(f"Error processing message: {e}")
+                await handle_unity_payload(websocket, payload)
 
     except Exception as e:
         logging.error(f"Failed to connect to Unity MPE: {e}")
