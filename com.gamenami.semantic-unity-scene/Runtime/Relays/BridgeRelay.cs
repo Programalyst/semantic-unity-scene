@@ -5,6 +5,7 @@ namespace Gamenami.SemanticUnityScene
     public static class BridgeRelay
     {
         // The Runtime Agent calls this
+        // MpeBridge listens to this event
         public static Action<string, byte[]> OnRequestSendToServer;
 
         public static void Send(string json, byte[] image)

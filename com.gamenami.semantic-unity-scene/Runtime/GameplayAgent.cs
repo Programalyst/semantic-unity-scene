@@ -13,6 +13,9 @@ namespace Gamenami.SemanticUnityScene
         [Header("Status")]
         [SerializeField] private bool awaitingResponse;
         
+        [Header("Actions")]
+        [SerializeField] private string agentAction;
+        
         private const float AGENT_INTERVAL = 1.0f; // Slower interval for LLM processing
         private float _cooldown = 0f;
 

@@ -60,16 +60,20 @@ namespace Gamenami.SemanticUnityScene.Editor
 
         private static void OnMessageReceived(int clientId, byte[] data)
         {
-            string message = Encoding.UTF8.GetString(data);
-            Debug.Log($"[MPE Received] Client {clientId}: {message}");
-        
-            // Example: Process command from your Python Agent
-            /*
-            if (message.Contains("CreateCube"))
+            string json = Encoding.UTF8.GetString(data);
+            Debug.Log($"[MPE Received] Client {clientId}: {json}");
+            var command = JsonConvert.DeserializeObject<dynamic>(json);
+            if (command.type == "function_call")
             {
-                GameObject.CreatePrimitive(PrimitiveType.Cube);
+                foreach (var call in command.content)
+                {
+                    HandleFunctionCall(call);
+                }
             }
-            */
+            else 
+            {
+                Debug.LogWarning($"[MPE] Unknown command type: {command.type}");
+            }
         }
         
         private static void HandleRuntimeRequest(string json, byte[] image)
@@ -78,12 +82,10 @@ namespace Gamenami.SemanticUnityScene.Editor
                 sceneJson = JsonConvert.DeserializeObject(json), // Ensures nested JSON is valid
                 b64Image = Convert.ToBase64String(image)
             };
-
-            // 2. Use your existing MPE broadcast logic
+            
             SendToAgent(JsonConvert.SerializeObject(payload));
         }
-
-        // Call this to send data back to your Python agent
+        
         private static void SendToAgent(string message)
         {
             var channel = ChannelService.GetChannelList();
@@ -96,6 +98,46 @@ namespace Gamenami.SemanticUnityScene.Editor
             }
         }
         
+        private static void HandleFunctionCall(dynamic call)
+        {
+            string funcName = call.name;
+            var args = call.args;
+
+            // Wrapping in delayCall ensures the click happens safely on the main thread during the next editor update
+            EditorApplication.delayCall += () =>
+            {
+                switch (funcName)
+                {
+                    case "click_screen_position":
+                    {
+                        // Gemini sends 0-1 Viewport coordinates
+                        var vx = (float)args.screenX;
+                        var vy = (float)args.screenY;
+                    
+                        AgentCommandRelay.ExecuteScreenClick(ConvertToScreenPosition(vx, vy));
+                        break;
+                    }
+                    case "click_ui_button":
+                        AgentCommandRelay.ExecuteButtonClick(args.ButtonName.ToString());
+                        break;
+                }
+            };
+        }
         
+        private static Vector2 ConvertToScreenPosition(float normalizedX, float normalizedY)
+        {
+            // 1. Flip Y back (Unity Screen/Viewport Y is bottom-up, LLM Y is top-down)
+            float correctedY = 1f - normalizedY;
+
+            // 2. Convert 0-1 Viewport to Actual Pixels
+            var pixelPosition = new Vector2(
+                normalizedX * Screen.width,
+                correctedY * Screen.height
+            );
+
+            Debug.Log($"[Agent Link] Viewport: {normalizedX},{normalizedY} -> Pixels: {pixelPosition}");
+            
+            return pixelPosition;
+        }
     }
 }
