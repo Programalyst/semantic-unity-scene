@@ -11,7 +11,8 @@ async def connect_to_unity_mpe(unity_port):
     """This is the persistent data channel."""
     uri = f"ws://127.0.0.1:{unity_port}/sus-agent-channel"
     try:
-        async with websockets.connect(uri) as websocket:
+        # ws frame max_size = 2 MB to accomodate screenshot + sceneJson. Increase as needed
+        async with websockets.connect(uri, max_size=2_000_000) as websocket:
             logging.info(f"Connected to Unity MPE on port {unity_port}")
             
             async for message in websocket:

@@ -4,7 +4,9 @@ import asyncio
 from imageAnalysis import gemini_image_analysis
 
 logger = logging.getLogger(__name__)
-processing_lock = asyncio.Lock()
+# prevent 1002 protocol error due to Unity sending a large buffer (sceneJson+image) with a Continuation Frame 
+# without an Initial Frame, or it might not set the "FIN" (Final) bit correctly
+processing_lock = asyncio.Lock() 
 
 async def handle_unity_payload(websocket, payload_string):
     """
@@ -14,31 +16,26 @@ async def handle_unity_payload(websocket, payload_string):
     if processing_lock.locked():
         return
 
-    try:
-        data = json.loads(payload_string)
-        scene_json = data.get("sceneJson")
-        b64_image = data.get("b64Image")
+    async with processing_lock: # will clear the lock after code finishes
+        try:
+            data = json.loads(payload_string)
+            scene_json = data.get("sceneJson")
+            b64_image = data.get("b64Image")
 
-        if not scene_json or not b64_image:
-            logger.warning("Received partial payload. Skipping Gemini analysis.")
-            return
+            logger.info(f"Processing Scene {len(str(scene_json))} chars + Image {len(str(b64_image))} chars")
 
-        logger.info(f"Processing Scene {len(str(scene_json))} chars + Image {len(str(b64_image))} chars")
+            response = await gemini_image_analysis(scene_json, b64_image)
 
-        # 4. Call Gemini
-        response = await gemini_image_analysis(scene_json, b64_image)
+            if response:
+                await handle_gemini_response(websocket, response)
+            
+            # Let the socket clear
+            await asyncio.sleep(0.1) 
 
-        # 5. Process and send Tools back to Unity
-        if response:
-            await handle_gemini_response(websocket, response)
-        
-        # 6. Let the socket clear
-        await asyncio.sleep(0.1) 
-
-    except json.JSONDecodeError:
-        logging.error("Failed to decode JSON from Unity.")
-    except Exception as e:
-        logging.error(f"Error in payload handler: {e}")
+        except json.JSONDecodeError:
+            logging.error("Failed to decode JSON from Unity.")
+        except Exception as e:
+            logging.error(f"Error in payload handler: {e}")
 
 async def handle_gemini_response(websocket, gemini_response):
     """
