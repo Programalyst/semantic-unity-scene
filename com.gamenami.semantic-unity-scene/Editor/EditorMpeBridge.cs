@@ -70,6 +70,11 @@ namespace Gamenami.SemanticUnityScene.Editor
                     HandleFunctionCall(call);
                 }
             }
+            else if (command.type == "text")
+            {
+                Debug.LogWarning($"[MPE] Agent text response: {command.content}");
+                AgentCommandRelay.CommandReceived(command.content); // allow GameplayAgent to try to act again. LLM may have decided not to act: hence returned text.
+            }
             else 
             {
                 Debug.LogWarning($"[MPE] Unknown command type: {command.type}");
@@ -102,6 +107,7 @@ namespace Gamenami.SemanticUnityScene.Editor
         {
             string funcName = call.name;
             var args = call.args;
+            var intent = call.args.Intent != null ? (string)call.args.Intent : "No Intent";
 
             // Wrapping in delayCall ensures the click happens safely on the main thread during the next editor update
             EditorApplication.delayCall += () =>
@@ -121,6 +127,7 @@ namespace Gamenami.SemanticUnityScene.Editor
                         AgentCommandRelay.ExecuteButtonClick(args.ButtonName.ToString());
                         break;
                 }
+                AgentCommandRelay.CommandReceived(intent); // allow GameplayAgent to act again
             };
         }
         
@@ -135,7 +142,7 @@ namespace Gamenami.SemanticUnityScene.Editor
                 correctedY * Screen.height
             );
 
-            Debug.Log($"[Agent Link] Viewport: {normalizedX},{normalizedY} -> Pixels: {pixelPosition}");
+            Debug.Log($"Viewport: {normalizedX},{normalizedY} -> Pixels: {pixelPosition}");
             
             return pixelPosition;
         }

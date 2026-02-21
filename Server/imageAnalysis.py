@@ -17,7 +17,10 @@ gemini_sdk_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 tools = types.Tool(function_declarations=[clickScreenPosition, clickUiButton])
 tool_config = types.ToolConfig(
     function_calling_config=types.FunctionCallingConfig(
-        mode="auto" #default
+        # "ANY" forces the model to use a tool call, "AUTO" allows the model to decide TOOL or TEXT
+        mode="ANY",
+        # Optional: restrict it to ONLY these specific tools
+        allowed_function_names=["click_screen_position", "click_ui_button"]
     )
 )
 
@@ -62,7 +65,7 @@ async def gemini_image_analysis(scene_json, b64_image) -> list[FunctionCall] | s
         contents=[prompt,image_part],
         config=config,
     )
-    print(f"Tokens used: {response.usage_metadata}")
+    print(f"Tokens used: {response.usage_metadata.total_token_count}")
 
     return response
     
